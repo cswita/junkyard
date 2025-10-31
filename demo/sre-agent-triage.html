@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRE Agent - Alert Triage & Diagnosis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Droid Sans Mono', monospace;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 2px solid #334155;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            color: #3b82f6;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            font-size: 1.1em;
+        }
+
+        .alert-card {
+            background: #1e293b;
+            border: 2px solid #ef4444;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 30px rgba(239, 68, 68, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 50px rgba(239, 68, 68, 0.6);
+            }
+        }
+
+        .alert-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .alert-badge {
+            background: #ef4444;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .alert-title {
+            font-size: 1.3em;
+            color: #fca5a5;
+        }
+
+        .alert-details {
+            margin-top: 15px;
+            padding: 15px;
+            background: #0f172a;
+            border-radius: 8px;
+            font-size: 0.95em;
+            line-height: 1.8;
+        }
+
+        .detail-row {
+            display: flex;
+            margin-bottom: 8px;
+        }
+
+        .detail-label {
+            color: #94a3b8;
+            min-width: 150px;
+        }
+
+        .detail-value {
+            color: #e2e8f0;
+        }
+
+        .agent-container {
+            background: #1e293b;
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+        }
+
+        .agent-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #334155;
+        }
+
+        .agent-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            animation: spin 3s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .agent-info h2 {
+            color: #60a5fa;
+            font-size: 1.5em;
+        }
+
+        .agent-status {
+            color: #34d399;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            background: #34d399;
+            border-radius: 50%;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .thought-stream {
+            margin-top: 20px;
+        }
+
+        .thought {
+            background: #0f172a;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        .thought-type {
+            color: #60a5fa;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .thought-content {
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+
+        .action-step {
+            background: #0f172a;
+            border-left: 4px solid #8b5cf6;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+
+        .action-header {
+            color: #a78bfa;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-content {
+            color: #cbd5e1;
+            line-height: 1.6;
+            margin-top: 8px;
+        }
+
+        .code-block {
+            background: #020617;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            overflow-x: auto;
+        }
+
+        .command {
+            color: #fbbf24;
+        }
+
+        .output {
+            color: #34d399;
+            margin-top: 5px;
+        }
+
+        .diagnosis {
+            background: #1e293b;
+            border: 2px solid #10b981;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+
+        .diagnosis h3 {
+            color: #34d399;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .diagnosis-content {
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 8px;
+            line-height: 1.8;
+        }
+
+        .root-cause {
+            color: #fbbf24;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .remediation {
+            background: #1e293b;
+            border: 2px solid #8b5cf6;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+
+        .remediation h3 {
+            color: #a78bfa;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .remediation-steps {
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .step {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #1e293b;
+            border-radius: 6px;
+        }
+
+        .step-number {
+            background: #8b5cf6;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+            color: #cbd5e1;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .metric-card {
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+        }
+
+        .metric-label {
+            color: #94a3b8;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            color: #60a5fa;
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .metric-trend {
+            color: #ef4444;
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #3b82f6;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+            margin-top: 20px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #334155;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -25px;
+            top: 5px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #3b82f6;
+            border: 2px solid #1e293b;
+        }
+
+        .success {
+            border-left-color: #10b981 !important;
+        }
+
+        .warning {
+            border-left-color: #f59e0b !important;
+        }
+
+        .error {
+            border-left-color: #ef4444 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 SRE Agent - Alert Triage & Diagnosis</h1>
+            <p class="subtitle">Autonomous Incident Response & Root Cause Analysis</p>
+        </header>
+
+        <div class="alert-card">
+            <div class="alert-header">
+                <span class="alert-badge">CRITICAL</span>
+                <span class="alert-title">High Memory Usage - Production API</span>
+            </div>
+            <div class="alert-details">
+                <div class="detail-row">
+                    <span class="detail-label">Service:</span>
+                    <span class="detail-value">api-gateway-prod</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Region:</span>
+                    <span class="detail-value">us-east-1</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Triggered:</span>
+                    <span class="detail-value">2025-10-31 14:23:45 UTC</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Current Memory:</span>
+                    <span class="detail-value" style="color: #ef4444; font-weight: bold;">94.3%</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Threshold:</span>
+                    <span class="detail-value">85%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="agent-container" id="agentContainer">
+            <div class="agent-header">
+                <div class="agent-avatar">🤖</div>
+                <div class="agent-info">
+                    <h2>SRE Agent</h2>
+                    <div class="agent-status">
+                        <span class="status-indicator"></span>
+                        <span id="agentStatus">Ready to investigate</span>
+                    </div>
+                </div>
+            </div>
+            <div id="thoughtStream" class="thought-stream"></div>
+        </div>
+
+        <div id="diagnosisSection"></div>
+        <div id="remediationSection"></div>
+
+        <div class="controls">
+            <button class="btn" id="startBtn" onclick="startTriage()">Start Triage Process</button>
+        </div>
+    </div>
+
+    <script>
+        let triageInProgress = false;
+
+        const triageSteps = [
+            {
+                type: 'thought',
+                icon: '💭',
+                title: 'ANALYZING ALERT',
+                content: 'Alert indicates memory usage at 94.3% on api-gateway-prod in us-east-1. This exceeds the 85% threshold and is marked as CRITICAL. Need to investigate immediately to prevent service degradation or OOM kills.',
+                delay: 1000
+            },
+            {
+                type: 'thought',
+                icon: '🎯',
+                title: 'FORMULATING INVESTIGATION PLAN',
+                content: 'Will check: (1) Current memory consumption patterns, (2) Recent deployments or changes, (3) Traffic patterns, (4) Process-level memory usage, (5) Potential memory leaks.',
+                delay: 2000
+            },
+            {
+                type: 'action',
+                icon: '🔍',
+                title: 'STEP 1: Querying Current Metrics',
+                content: 'Fetching detailed memory metrics from monitoring system...',
+                command: 'kubectl top pods -n production --sort-by=memory',
+                output: `NAME                          CPU(cores)   MEMORY(bytes)
+api-gateway-7d9f8c-x7k2m     450m         3.8Gi
+api-gateway-7d9f8c-p9m3n     420m         3.7Gi
+api-gateway-7d9f8c-k5r8t     380m         3.2Gi`,
+                delay: 3000
+            },
+            {
+                type: 'thought',
+                icon: '📊',
+                title: 'OBSERVATION',
+                content: 'All three replicas show consistently high memory usage (3.2-3.8Gi). This suggests a systematic issue rather than a single pod problem. Memory usage is approaching pod limits (4Gi).',
+                delay: 2000
+            },
+            {
+                type: 'action',
+                icon: '📈',
+                title: 'STEP 2: Checking Recent Changes',
+                content: 'Querying deployment history and recent configuration changes...',
+                command: 'kubectl rollout history deployment/api-gateway -n production',
+                output: `REVISION  CHANGE-CAUSE
+1         Initial deployment
+2         Update to v2.3.1 - Added caching layer
+3         Update to v2.4.0 - Performance optimizations (deployed 2h ago)`,
+                delay: 3000
+            },
+            {
+                type: 'thought',
+                icon: '⚠️',
+                title: 'CORRELATION DETECTED',
+                content: 'Deployment v2.4.0 was rolled out 2 hours ago, which aligns with when memory usage started climbing. This is a strong indicator that the new version introduced a memory issue.',
+                delay: 2000
+            },
+            {
+                type: 'action',
+                icon: '🔬',
+                title: 'STEP 3: Analyzing Application Metrics',
+                content: 'Fetching heap profiling data and GC statistics...',
+                command: 'curl -s http://api-gateway:6060/debug/pprof/heap?debug=1 | head -20',
+                output: `heap profile: 2847 objects, 3.2GB allocated
+# runtime.MemStats
+# Alloc = 3221225472
+# TotalAlloc = 12884901888
+# Sys = 3758096384
+# NumGC = 45
+#
+Top allocations:
+1.8GB  github.com/company/api/cache.(*ResponseCache).Store
+0.9GB  github.com/company/api/middleware.(*Logger).buffer
+0.3GB  encoding/json.Unmarshal`,
+                delay: 3500
+            },
+            {
+                type: 'thought',
+                icon: '🎯',
+                title: 'ROOT CAUSE IDENTIFIED',
+                content: 'The ResponseCache.Store method is allocating 1.8GB of memory! The new caching implementation appears to be storing entire response bodies in memory without proper size limits or eviction policies. This is causing unbounded memory growth.',
+                delay: 2000
+            },
+            {
+                type: 'action',
+                icon: '📝',
+                title: 'STEP 4: Reviewing Code Changes',
+                content: 'Examining the diff for v2.4.0 deployment...',
+                command: 'git diff v2.3.1 v2.4.0 -- internal/cache/',
+                output: `+ cache := make(map[string][]byte)  // No size limit!
++ cache[key] = responseBody
+- // Previous implementation used LRU with max size`,
+                delay: 3000
+            },
+            {
+                type: 'thought',
+                icon: '✅',
+                title: 'DIAGNOSIS COMPLETE',
+                content: 'High confidence root cause: v2.4.0 replaced the bounded LRU cache with an unbounded map, causing memory to grow indefinitely as more unique requests are cached. The fix requires either rollback or hotfix to restore cache size limits.',
+                delay: 2000
+            }
+        ];
+
+        async function startTriage() {
+            if (triageInProgress) return;
+
+            triageInProgress = true;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('agentStatus').textContent = 'Investigating...';
+
+            const thoughtStream = document.getElementById('thoughtStream');
+            thoughtStream.innerHTML = '';
+
+            for (let step of triageSteps) {
+                await new Promise(resolve => setTimeout(resolve, step.delay));
+
+                const element = document.createElement('div');
+                element.className = step.type === 'thought' ? 'thought' : 'action-step';
+
+                if (step.type === 'thought') {
+                    element.innerHTML = `
+                        <div class="thought-type">
+                            <span>${step.icon}</span>
+                            <span>${step.title}</span>
+                        </div>
+                        <div class="thought-content">${step.content}</div>
+                    `;
+                } else {
+                    element.innerHTML = `
+                        <div class="action-header">
+                            <span>${step.icon}</span>
+                            <span>${step.title}</span>
+                            <span class="loading"></span>
+                        </div>
+                        <div class="action-content">
+                            ${step.content}
+                            ${step.command ? `<div class="code-block">
+                                <div class="command">$ ${step.command}</div>
+                                <div class="output">${step.output}</div>
+                            </div>` : ''}
+                        </div>
+                    `;
+                }
+
+                thoughtStream.appendChild(element);
+                thoughtStream.scrollTop = thoughtStream.scrollHeight;
+            }
+
+            // Show diagnosis
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            showDiagnosis();
+
+            // Show remediation
+            await new Promise(resolve => setTimeout(resolve, 2500));
+            showRemediation();
+
+            document.getElementById('agentStatus').textContent = 'Investigation complete';
+            document.getElementById('startBtn').textContent = 'Restart Demo';
+            document.getElementById('startBtn').disabled = false;
+            triageInProgress = false;
+        }
+
+        function showDiagnosis() {
+            const diagnosisHTML = `
+                <div class="diagnosis">
+                    <h3>
+                        <span>🔍</span>
+                        <span>Diagnosis Summary</span>
+                    </h3>
+                    <div class="diagnosis-content">
+                        <div class="root-cause">
+                            ⚠️ Root Cause: Unbounded Memory Cache in v2.4.0
+                        </div>
+                        <p style="margin-bottom: 15px;">
+                            The production API gateway is experiencing critical memory pressure due to an unbounded
+                            in-memory cache introduced in version 2.4.0 (deployed 2 hours ago). The cache implementation
+                            lacks size limits and eviction policies, causing memory to grow linearly with request diversity.
+                        </p>
+                        <div class="metrics">
+                            <div class="metric-card">
+                                <div class="metric-label">Confidence Level</div>
+                                <div class="metric-value">98%</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Time to Diagnose</div>
+                                <div class="metric-value">42s</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Impact Severity</div>
+                                <div class="metric-value" style="color: #ef4444;">CRITICAL</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Affected Pods</div>
+                                <div class="metric-value">3/3</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('diagnosisSection').innerHTML = diagnosisHTML;
+        }
+
+        function showRemediation() {
+            const remediationHTML = `
+                <div class="remediation">
+                    <h3>
+                        <span>🔧</span>
+                        <span>Recommended Remediation</span>
+                    </h3>
+                    <div class="remediation-steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <strong>Immediate Action: Rollback to v2.3.1</strong><br>
+                                Roll back to the previous stable version to restore service health while a proper fix is developed.
+                                <div class="code-block">
+                                    <div class="command">$ kubectl rollout undo deployment/api-gateway -n production</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <strong>Monitor Memory Recovery</strong><br>
+                                Watch memory metrics to confirm they return to normal levels (below 60%) after rollback.
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <strong>Fix Cache Implementation</strong><br>
+                                Update the ResponseCache to use a bounded LRU cache with configurable size limits
+                                (recommend 500MB max) and TTL-based eviction.
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <strong>Add Memory Profiling Tests</strong><br>
+                                Implement memory leak detection tests in CI/CD to catch unbounded allocations before production.
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">5</div>
+                            <div class="step-content">
+                                <strong>Deploy Fixed Version</strong><br>
+                                After testing, deploy v2.4.1 with the corrected cache implementation to canary environment first.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('remediationSection').innerHTML = remediationHTML;
+        }
+    </script>
+</body>
+</html>
