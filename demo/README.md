@@ -11,13 +11,21 @@ This demo showcases an intelligent SRE agent responding to a critical production
 - **Diagnoses** root causes with high confidence
 - **Recommends** remediation steps with prioritization
 
+## Design
+
+Styled to match the **New Relic platform** with:
+- Official New Relic brand colors (teal #008C99, green #11A682)
+- Dark theme optimized for observability workflows
+- Clean, data-focused enterprise SaaS aesthetic
+- System font stack for native platform feel
+
 ## Features
 
 ### 🎨 Generative UX
 - Real-time thought stream showing agent reasoning
 - Progressive disclosure of investigation steps
 - Animated transitions and visual feedback
-- Terminal-inspired aesthetic with modern styling
+- New Relic platform-inspired design system
 
 ### 🤖 Intelligent Triage Process
 The demo simulates a realistic incident response workflow:
@@ -83,9 +91,33 @@ start sre-agent-triage.html  # Windows
 
 ### Technologies Used
 - Pure HTML/CSS/JavaScript (no dependencies)
+- CSS Custom Properties (variables) for New Relic design tokens
 - CSS animations for generative reveal effects
 - Async/await for progressive content display
 - Responsive design for various screen sizes
+
+### Design System
+
+The interface uses New Relic's platform design language:
+
+**Color Palette:**
+- Primary: Teal `#008C99`
+- Success: Green `#11A682`
+- Critical: Red `#F5554A`
+- Warning: Orange `#F5A623`
+- Backgrounds: `#0D0D0D`, `#1A1A1A`, `#2A2A2E`
+- Text: `#F4F5F5`, `#E3E4E6`, `#8E9194`
+
+**Typography:**
+- System font stack for native performance
+- Font weights: 400 (regular), 600 (semibold), 700 (bold)
+- Carefully tuned sizes and line heights
+
+**Components:**
+- Subtle borders and shadows for depth
+- 3-4px border-radius for modern look
+- Left accent borders for status indication
+- High contrast for accessibility
 
 ### Customization
 
@@ -106,11 +138,13 @@ const triageSteps = [
 
 ### Styling
 
-The design uses a dark terminal-inspired theme with:
-- Monospace fonts for technical authenticity
-- Color-coded severity levels (red=critical, yellow=warning, green=success)
-- Glowing effects for active elements
-- Smooth animations for content reveal
+The design mirrors the New Relic platform aesthetic:
+- System fonts for a native application feel
+- Color-coded severity levels (red=critical, orange=warning, green=success)
+- Subtle shadows and borders for depth without distraction
+- Smooth fade-in animations for progressive disclosure
+- High contrast dark theme optimized for long observation sessions
+- Teal accent color for interactive and informational elements
 
 ## Use Cases
 
